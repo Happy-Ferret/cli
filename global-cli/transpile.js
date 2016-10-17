@@ -20,7 +20,7 @@ function displayHelp() {
 module.exports = function(args) {
 	var opts = minimist(args, {
 		string: ['o', 'output'],
-		boolean: ['h', 'help'],
+		boolean: ['loose', 'h', 'help'],
 		alias: {o:'output', h:'help'}
 	});
 	opts.help && displayHelp();
@@ -38,8 +38,21 @@ module.exports = function(args) {
 					console.error(globErr);
 				} else {
 					var babelrc = path.join(__dirname, '..', 'config', '.babelrc');
+					var babelOpts = {extends:babelrc};
+					if(opts.loose) {
+						babelOpts = {
+							presets: [
+								[require.resolve('babel-preset-es2015'), {loose: true}],
+								require.resolve('babel-preset-stage-0'),
+								require.resolve('babel-preset-react')
+							],
+							plugins: [
+								require.resolve('babel-plugin-dev-expression'),
+							]
+						};
+					}
 					files.forEach(function(js) {
-						babel.transformFile(js, {extends:babelrc}, function(babelErr, result) {
+						babel.transformFile(js, babelOpts, function(babelErr, result) {
 							if(babelErr) {
 								console.error(babelErr);
 							} else {
