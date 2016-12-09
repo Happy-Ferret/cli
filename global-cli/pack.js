@@ -145,15 +145,11 @@ function setupFramework(config) {
 	config.plugins.push(new EnactFrameworkPlugin());
 }
 
-function setupIsomorphic(config, snapshot) {
+function setupIsomorphic(config, reactDOM, snapshot) {
 	var meta = readJSON('package.json') || {};
 	var enact = meta.enact || {};
 	// Only use isomorphic if an isomorphic entrypoint is specified
 	if(enact.isomorphic || enact.prerender) {
-		var reactDOM = path.join(process.cwd(), 'node_modules', 'react-dom', 'index.js');
-		if(!exists(reactDOM)) {
-			reactDOM = require.resolve('react-dom');
-		}
 		// Include react-dom as top level entrypoint so espose-loader will expose
 		// it to window.ReactDOM to allow runtime rendering of the app.
 		config.entry.main.unshift(reactDOM);
@@ -298,7 +294,7 @@ function displayHelp() {
 
 module.exports = function(args) {
 	var opts = minimist(args, {
-		boolean: ['minify', 'framework', 's', 'stats', 'p', 'production', 'i', 'isomorphic', 'snapshot', 'w', 'watch', 'h', 'help'],
+		boolean: ['minify', 'framework', 'preact', 'inferno', 's', 'stats', 'p', 'production', 'i', 'isomorphic', 'snapshot', 'w', 'watch', 'h', 'help'],
 		string: ['externals', 'externals-inject'],
 		default: {minify:true},
 		alias: {s:'stats', p:'production', i:'isomorphic', w:'watch', h:'help'}
@@ -328,12 +324,32 @@ module.exports = function(args) {
 			setupSnapshot(config, true);
 		}
 	} else {
-		// Backwards compatibility for <15.4.0 React
-		if(!exists(path.join(process.cwd(), 'node_modules', 'react-dom', 'lib', 'ReactPerf.js'))) {
-			config.resolve.alias['react-dom/lib/ReactPerf'] = 'react/lib/ReactPerf';
+		var reactDOM = path.join(process.cwd(), 'node_modules', 'react-dom', 'index.js');
+		if(!exists(reactDOM)) {
+			reactDOM = require.resolve('react-dom');
 		}
+		if(opts.preact) {
+			config.resolve.alias['react'] = path.resolve(__dirname, '..', 'node_modules', 'preact-compat');
+			config.resolve.alias['react-dom'] = path.resolve(__dirname, '..', 'node_modules', 'preact-compat');
+			reactDOM = path.resolve(__dirname, '..', 'node_modules', 'preact-compat');
+			config.plugins[0].options.preact = true;
+		} else if (opts.inferno) {
+			config.resolve.alias['react'] = path.resolve(__dirname, '..', 'node_modules', 'inferno-compat');
+			config.resolve.alias['react-dom'] = path.resolve(__dirname, '..', 'node_modules', 'inferno-compat');
+			reactDOM = path.resolve(__dirname, '..', 'node_modules', 'inferno-compat');
+			if(!opts.production) {
+				config.entry.main.splice(1, 1);
+			}
+			config.plugins[0].options.inferno = true;
+		} else {
+			// Backwards compatibility for <15.4.0 React
+			if(!exists(path.join(process.cwd(), 'node_modules', 'react-dom', 'lib', 'ReactPerf.js'))) {
+				config.resolve.alias['react-dom/lib/ReactPerf'] = 'react/lib/ReactPerf';
+			}
+		}
+		
 		if(opts.isomorphic) {
-			setupIsomorphic(config, (opts.snapshot && !opts.externals));
+			setupIsomorphic(config, reactDOM, (opts.snapshot && !opts.externals));
 		}
 		if(opts.externals) {
 			externalFramework(config, opts.externals, opts['externals-inject']);
