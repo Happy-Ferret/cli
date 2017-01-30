@@ -138,6 +138,7 @@ function displayHelp() {
 	console.log('    enact pack [options]');
 	console.log();
 	console.log('  Options');
+	console.log('    -c, --clean       Clean output directory before build');
 	console.log('    -s, --stats       Output bundle analysis file');
 	console.log('    -w, --watch       Rebuild on file changes');
 	console.log('    -p, --production  Build in production mode');
@@ -159,10 +160,11 @@ function displayHelp() {
 
 module.exports = function(args) {
 	var opts = minimist(args, {
-		boolean: ['minify', 'framework', 's', 'stats', 'p', 'production', 'i', 'isomorphic', 'snapshot', 'w', 'watch', 'h', 'help'],
+		boolean: ['minify', 'framework', 'c', 'clean', 's', 'stats', 'p', 'production', 'i', 'isomorphic',
+				'snapshot', 'w', 'watch', 'h', 'help'],
 		string: ['externals', 'externals-inject'],
 		default: {minify:true},
-		alias: {s:'stats', p:'production', i:'isomorphic', w:'watch', h:'help'}
+		alias: {c:'clean', s:'stats', p:'production', i:'isomorphic', w:'watch', h:'help'}
 	});
 	opts.help && displayHelp();
 
@@ -173,6 +175,7 @@ module.exports = function(args) {
 	if(opts.production) {
 		process.env.NODE_ENV = 'production';
 		config = prodConfig;
+		opts.clean = true;
 	}
 
 	modifiers.apply(config, opts);
@@ -182,20 +185,18 @@ module.exports = function(args) {
 		process.exit(1);
 	}
 
-	if(opts.watch) {
-		watch(config);
-	} else {
-		// Read the current file sizes in dist directory.
-		// This lets us display how much they changed later.
-		recursive('dist', (err, fileNames) => {
-			var previousSizeMap = (fileNames || [])
-				.filter(fileName => /\.(js|css|bin)$/.test(fileName))
-				.reduce((memo, fileName) => {
-					var key = shortFilename(fileName);
-					memo[key] = fs.statSync(fileName).size;
-					return memo;
-				}, {});
+	// Read the current file sizes in dist directory.
+	// This lets us display how much they changed later.
+	recursive('dist', (err, fileNames) => {
+		var previousSizeMap = (fileNames || [])
+			.filter(fileName => /\.(js|css|bin)$/.test(fileName))
+			.reduce((memo, fileName) => {
+				var key = shortFilename(fileName);
+				memo[key] = fs.statSync(fileName).size;
+				return memo;
+			}, {});
 
+		if(opts.clean) {
 			// Remove all content but keep the directory so that
 			// if you're in it, you don't end up in Trash
 			try {
@@ -206,9 +207,13 @@ module.exports = function(args) {
 				console.log();
 				process.exit(1);
 			}
+		}
 
+		if(opts.watch) {
+			watch(config);
+		} else {
 			// Start the webpack build
 			build(config, previousSizeMap);
-		});
-	}
+		}
+	});
 };
