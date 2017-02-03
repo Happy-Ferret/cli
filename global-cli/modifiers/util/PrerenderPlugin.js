@@ -6,6 +6,8 @@ var
 	exists = require('path-exists').sync,
 	FileXHR = require('./FileXHR');
 
+require('console.mute');
+
 // Determine if it's a NodeJS output filesystem or if it's a foreign/virtual one.
 function isNodeOutputFS(compiler) {
 	return (compiler.outputFileSystem
@@ -15,79 +17,75 @@ function isNodeOutputFS(compiler) {
 }
 
 function findLocales(context, target) {
-	if(Array.isArray(target)) {
-		return target;
+	if(target === 'tv') {
+		return JSON.parse(fs.readFileSync(path.join(__dirname, 'locales-tv.json'), {encoding: 'utf8'})).paths;
+	} else if(target === 'signage') {
+		return JSON.parse(fs.readFileSync(path.join(__dirname, 'locales-signage.json'), {encoding: 'utf8'})).paths;
 	} else if(target === 'used') {
 		return localesInManifest(path.join(context, 'resources', 'ilibmanifest.json'));
 	} else if(target === 'all') {
 		return localesInManifest('node_modules/@enact/i18n/ilibmanifest');
+	} else {
+		return target.replace(/-/g, '/').split(',');
 	}
-	return [];
 }
 
-function localesInManifest(manifest) {
+function localesInManifest(manifest, includeParents) {
 	try {
-		var meta = JSON.parse(fs.readFileSync(manifest, {encoding:'utf8'}));
+		var meta = JSON.parse(fs.readFileSync(manifest, {encoding:'utf8'}).replace(/-/g, '/'));
 		var locales = [];
 		var curr, name, index;
 		for(var i=0; meta.files && i<meta.files.length; i++) {
-			curr = path.dirname(meta.files[i]);
-			if(locales.indexOf(curr) === -1 && curr.indexOf('zoneinfo') !== 0) {
-				// Remove lower-scoped directories.
-				/*for(var j=0; j<locales.length; j++) {
-					if(curr.indexOf(locales[j]) === 0) {
-						locales[j].splice(j, 1);
-						break;
+			if(includeParents) {
+				for(curr = path.dirname(meta.files[i]); curr && curr !== '.'; curr = path.dirname(curr)) {
+					if(locales.indexOf(curr) === -1 && (curr.length === 2 || curr.indexOf('/') === 2)) {
+						locales.push(curr);
 					}
-				}*/
-				// Put appinfo-based entries at the top of the array to reduce number
-				// of appinfo files we'll need to create.
-				if(meta.files.indexOf(path.join(curr, 'appinfo.json')) > -1) {
-					locales.unshift(curr);
-				} else {
+				}
+			} else {
+				curr = path.dirname(meta.files[i]);
+				if(locales.indexOf(curr) === -1 && (curr.length === 2 || curr.indexOf('/') === 2)) {
 					locales.push(curr);
 				}
-				
 			}
 		}
+		locales.sort(function(a, b) {
+			return a.split('/').length > b.split('/').length;
+		});
 		return locales;
 	} catch(e) {
 		return [];
 	}
 }
 
-function localeString(path) {
-	var tokens = path.split('/');
-	if(tokens.length>1) {
-		return tokens[0] + '-' + tokens[tokens.length-1];
-	} else {
-		return path;
-	}
-}
-
 var htmlFiles = [];
 var htmlContents = [];
-function prerenderLocale(compilation, html, locale, ReactDOMServer, App) {
-	var locStr = localeString(locale);
+function prerenderLocale(compilation, html, locale, ReactDOMServer, src) {
+	var locStr = locale.replace(/\//g, '-');
+	global.publicPath = path.relative(path.join('resources', locale), '.') + '/';
+	console.mute();
+	var App = requireFromString(src, 'main.' + locStr + '.js');
 	if(global.iLibLocale) {
 		global.iLibLocale.updateLocale(locStr);
 	}
 	var code = ReactDOMServer.renderToString(App['default'] || App);
+	console.resume();
 	var i = htmlContents.indexOf(code);
 	if(i>-1) {
 		updateAppinfo(compilation, path.join('resources', locale, 'appinfo.json'),
 				path.relative(path.join('resources', locale), htmlFiles[i]));
 	} else {
-		//var outName = path.join('resources', locale, 'index.html');
-		var outName = 'index.' + locStr + '.html';
-		var data = html.replace('<div id="root"></div>', '<div id="root">' + code + '</div>');
-		/*data = data.replace(/"([^'"]*\.(js|css))"/g, function(match, file) {
+		var outName = path.join('resources', locale, 'index.html');
+		var outputHTML = '<div id="root">' + code + '</div>\n\t\t<script type="text/javascript">window.publicPath = "'
+				+ global.publicPath + '";</script>';
+		var data = html.replace('<div id="root"></div>', outputHTML);
+		data = data.replace(/"([^'"]*\.(js|css))"/g, function(match, file) {
 			if(!path.isAbsolute(file)) {
 				return '"' + path.relative(path.join('resources', locale), file) + '"';
 			} else {
 				return '"' + file + '"';
 			}
-		});*/
+		});
 		fs.writeFileSync(path.join(compilation.options.output.path, outName), data, {encoding:'utf8'});
 		// add to stats
 		compilation.assets[outName] = {
@@ -123,13 +121,11 @@ function updateAppinfo(compilation, file, index) {
 
 function PrerenderPlugin(options) {
 	this.options = options || {};
-	// can be 'used', 'all', or a specific array of locales
-	this.options.locales = this.options.locales || 'used';
 }
-module.exports = PrerenderPlugin;
+
 PrerenderPlugin.prototype.apply = function(compiler) {
 	var opts = this.options;
-	var htmlTemplate, ReactDOMServer, App;
+	var htmlTemplate, ReactDOMServer, src;
 	compiler.plugin('compilation', function(compilation) {
 		if(isNodeOutputFS(compiler)) {
 			compilation.plugin('html-webpack-plugin-after-html-processing', function(params, callback) {
@@ -151,13 +147,15 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 					global.Request = global.fetch.Request;
 				}
 				try {
-					var src = compilation.assets['main.js'].source();
+					src = compilation.assets['main.js'].source();
 					if(params.plugin.options.externalFramework) {
 						// Add external Enact framework filepath if it's used
 						src = src.replace(/require\(["']enact_framework["']\)/g, 'require("' + params.plugin.options.externalFramework +  '")');
 					}
-					App = requireFromString(src, 'main.js');
+					console.mute();
+					var App = requireFromString(src, 'main.js');
 					var code = ReactDOMServer.renderToString(App['default'] || App);
+					console.resume();
 					params.html = htmlTemplate.replace('<div id="root"></div>', '<div id="root">' + code + '</div>');
 
 					if(!global.iLibLocale && params.plugin.options.externalFramework) {
@@ -178,16 +176,20 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 			});
 		}
 	});
-	compiler.plugin('after-emit', function(compilation, callback) {
-		if(isNodeOutputFS(compiler) && htmlTemplate && ReactDOMServer && App) {
-			FileXHR.compilation = compilation;
-			global.XMLHttpRequest = FileXHR;
+	if(opts.locales) {
+		compiler.plugin('after-emit', function(compilation, callback) {
+			if(isNodeOutputFS(compiler) && htmlTemplate && ReactDOMServer && src) {
+				FileXHR.compilation = compilation;
+				global.XMLHttpRequest = FileXHR;
 
-			var locales = findLocales(compiler.options.context, opts.locales);
-			for(var i=0; i<locales.length; i++) {
-				prerenderLocale(compilation, htmlTemplate, locales[i], ReactDOMServer, App);
+				var locales = findLocales(compiler.options.context, opts.locales);
+				for(var i=0; i<locales.length; i++) {
+					prerenderLocale(compilation, htmlTemplate, locales[i], ReactDOMServer, src);
+				}
 			}
-		}
-		callback && callback();
-	});
+			callback && callback();
+		});
+	}
 };
+
+module.exports = PrerenderPlugin;
