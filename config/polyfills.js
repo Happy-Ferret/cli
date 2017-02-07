@@ -29,6 +29,9 @@ if (!Math.sign) {
     }
 }
 
+// Map polyfill
+require('es6-map/implement');
+
 // Common String ES6 functionalities for character values.
 // Used by Enact's Moonstone library.
 require('string.fromcodepoint');
