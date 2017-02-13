@@ -1,9 +1,18 @@
 {
-	"presets": ["es2015", "stage-0", "react"],
-	"plugins": ["dev-expression"],
+	"presets": [
+		["env", {
+			"targets": {
+				"chrome": 53
+			},
+			"useBuiltIns": true
+		}], "stage-0", "react"
+	],
+	"plugins": [
+		"dev-expression"
+	],
 	"env": {
 		"production": {
-			"plugins": ["transform-react-inline-elements","transform-react-constant-elements"]
+			"plugins": ["transform-react-inline-elements", "transform-react-constant-elements"]
 		}
 	}
 }

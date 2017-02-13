@@ -20,6 +20,7 @@ var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var GracefulFsPlugin = require('graceful-fs-webpack-plugin');
 var ILibPlugin = require('ilib-webpack-plugin');
 var WebOSMetaPlugin = require('webos-meta-webpack-plugin');
+var BabiliPlugin = require("babili-webpack-plugin");
 
 function readJSON(file) {
 	try {
@@ -222,19 +223,7 @@ module.exports = {
 		// Try to dedupe duplicated modules, if any:
 		new webpack.optimize.DedupePlugin(),
 		// Minify the code.
-		new webpack.optimize.UglifyJsPlugin({
-			compress: {
-				screw_ie8: true, // React doesn't support IE8
-				warnings: false
-			},
-			mangle: {
-				screw_ie8: true
-			},
-			output: {
-				comments: false,
-				screw_ie8: true
-			}
-		}),
+		new BabiliPlugin({regexpConstructors:false}),
 		// Note: this won't work without ExtractTextPlugin.extract(..) in `loaders`.
 		new ExtractTextPlugin('[name].css'),
 		// Switch the internal NodeOutputFilesystem to use graceful-fs to avoid
