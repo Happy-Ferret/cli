@@ -5,7 +5,9 @@ var
 	exists = require('path-exists').sync,
 	snapshotSetup = require('./snapshot'),
 	helper = require('./util/config-helper'),
-	PrerenderPlugin = require('./util/PrerenderPlugin');
+	PrerenderPlugin = require('./util/PrerenderPlugin'),
+	parentRequire = require('./util/parent-require'),
+	webpack = parentRequire('webpack');
 
 function readJSON(file) {
 	try {
@@ -48,6 +50,10 @@ module.exports = function(config, opts) {
 
 		// Use universal module definition to allow usage in Node and browser environments.
 		config.output.libraryTarget = 'umd';
+
+		// Use iLib locale and $L functionality externally
+		config.entry.ilib = require.resolve('./util/ilib-preload.js');
+		config.plugins.push(new webpack.optimize.CommonsChunkPlugin('ilib', 'ilib-assist.js'));
 
 		// Update HTML webpack plugin to use the isomorphic template and include screentypes
 		var htmlPlugin = helper.getPluginByName(config, 'HtmlWebpackPlugin');
