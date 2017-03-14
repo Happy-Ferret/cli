@@ -24,6 +24,15 @@
 					}
 				}
 				document.documentElement.style.fontSize = scrObj.pxPerRem + 'px';
+
+				if(typeof App === 'undefined') {
+					var script = document.createElement('script');
+					script.type = 'text/javascript';
+					script.src = 'ilib-assist.js';
+					document.head.appendChild(script);
+				} else {
+					iLibLocale.updateLocale(null, true);
+				}
 			})();
 		</script>
 		<% for(var i=0; i<htmlWebpackPlugin.files.css.length; i++) { %><link href="<%= htmlWebpackPlugin.files.css[i] %>" rel="stylesheet"/><% } %>
@@ -58,13 +67,10 @@
 						document.body.appendChild(script);
 					}
 				};
-				appendScripts(<%= JSON.stringify(htmlWebpackPlugin.files.js || []) %>);
+				appendScripts(<%= JSON.stringify(htmlWebpackPlugin.files.js || []).replace(/['"]ilib-assist.js['"],*\s*/, '') %>);
 			<% } else { %>
 				if(typeof updateEnvironment === 'function') {
 					updateEnvironment();
-				}
-				if(typeof iLibLocale === 'object') {
-					iLibLocale.updateLocale();
 				}
 				if(typeof App === 'object' && (typeof ReactDOM === 'object')) {
 					ReactDOM.render(App['default'] || App, document.getElementById('root'));

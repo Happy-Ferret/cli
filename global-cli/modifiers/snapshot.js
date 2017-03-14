@@ -22,6 +22,10 @@ module.exports = function(config, opts) {
 		config.entry.main.splice(-1, 0, require.resolve('./util/snapshot-helper'));
 	}
 
+	config.entry.main.splice(-1, 0, config.entry.ilib);
+	delete config.entry.ilib;
+	helper.removePlugin(config, 'CommonsChunkPlugin');
+
 	// Include plugin to attempt generation of v8 snapshot binary if V8_MKSNAPSHOT env var is set
 	config.plugins.push(new SnapshotPlugin({
 		target: (opts.framework ? 'enact.js' : 'main.js')

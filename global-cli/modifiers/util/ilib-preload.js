@@ -8,5 +8,4 @@
 
 require('@enact/i18n/src/glue');
 global.iLibLocale = require('@enact/i18n/src/locale');
-var $L = require('@enact/i18n/src/$L');
-global.$L = $L.default || $L;
+global.$L = require('@enact/i18n/src/$L').default;

@@ -54,12 +54,18 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 					if(params.plugin.options.externalFramework) {
 						// Add external Enact framework filepath if it's used
 						src = src.replace(/require\(["']enact_framework["']\)/g, 'require("' + params.plugin.options.externalFramework +  '")');
-						ilibAssist = ilibAssist.replace(/require\(["']enact_framework["']\)/g, 'require("' + params.plugin.options.externalFramework +  '")');
+						if(ilibAssist) {
+							ilibAssist = ilibAssist.replace(/require\(["']enact_framework["']\)/g, 'require("' + params.plugin.options.externalFramework +  '")');
+						}
 					}
-					ilibAssist = ilibAssist.replace(/window\["webpackJsonpApp"\]/g, 'global.webpackJsonpApp').replace('installedChunks[chunkId] = [callback];',
-							'installedChunks[chunkId] = [callback]; require(__webpack_require__.p + "" + chunkId + "." + ({"1":"main"}[chunkId]||chunkId) + ".js"); return;')
-							.replace('function $L(str) {', 'function $L(str) { return "_$L(" + encodeURIComponent(JSON.stringify(str)) + ")";');
-					requireFromString(ilibAssist, opts.ilibChunk);
+					if(ilibAssist) {
+						ilibAssist = ilibAssist.replace(/window\["webpackJsonpApp"\]/g, 'global.webpackJsonpApp').replace('installedChunks[chunkId] = [callback];',
+								'installedChunks[chunkId] = [callback]; require(__webpack_require__.p + "" + chunkId + "." + ({"1":"main"}[chunkId]||chunkId) + ".js"); return;')
+								.replace('function $L(str) {', 'function $L(str) { return "_$L(" + encodeURIComponent(JSON.stringify(str)) + ")";');
+						requireFromString(ilibAssist, opts.ilibChunk);
+					} else {
+						src = src.replace('function $L(str) {', 'function $L(str) { return "_$L(" + encodeURIComponent(JSON.stringify(str)) + ")";');
+					}
 					var App = requireFromString(src, opts.chunk);
 					var code = ReactDOMServer.renderToStaticMarkup(App['default'] || App);
 					code = code.replace(/>[^<]+</g, function(match) {
@@ -70,10 +76,7 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 						return JSON.parse(decodeURIComponent(val));
 					});
 
-					var content = '<script type="text/javascript" src="ilib-assist.js"></script>\n\t\t' +
-							'<div id="root">' + code + '</div>';
-					params.html = params.html.replace(/<script[^>]*ilib-assist.js[^>]*><\/script>/g, '')
-							.replace(/['"]ilib-assist.js['"],*/g, '').replace('<div id="root"></div>', content);
+					params.html = params.html.replace('<div id="root"></div>', '<div id="root">' + code + '</div>');
 				} catch(e) {
 					console.log();
 					console.log(chalk.yellow('Unable to generate prerender of app state HTML'));
