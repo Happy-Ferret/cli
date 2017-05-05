@@ -19,6 +19,7 @@ var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var GracefulFsPlugin = require('graceful-fs-webpack-plugin');
 var ILibPlugin = require('ilib-webpack-plugin');
 var WebOSMetaPlugin = require('webos-meta-webpack-plugin');
+var PrepackWebpackPlugin = require('prepack-webpack-plugin').default;
 
 var pkg = require(path.resolve('./package.json'));
 var enact = pkg.enact || {};
@@ -238,6 +239,9 @@ module.exports = {
 		new ILibPlugin(),
 		// Automatically detect ./appinfo.json and ./webos-meta/appinfo.json files,
 		// and parses any to copy over any webOS meta assets at build time.
-		new WebOSMetaPlugin()
+		new WebOSMetaPlugin(),
+		// Partially evaluates the built javascript and then optimizes the code.
+		// See https://prepack.io for more details.
+		new PrepackWebpackPlugin({})
 	]
 };
