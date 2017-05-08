@@ -20,6 +20,7 @@ var ILibPlugin = require('ilib-webpack-plugin');
 var WebOSMetaPlugin = require('webos-meta-webpack-plugin');
 var CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 var WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
+var PrepackWebpackPlugin = require('prepack-webpack-plugin').default;
 
 var pkg = require(path.resolve('./package.json'));
 var enact = pkg.enact || {};
@@ -213,6 +214,9 @@ module.exports = {
 		hints: false
 	},
 	plugins: [
+		// Partially evaluates the built javascript and then optimizes the code.
+		// See https://prepack.io for more details.
+		new PrepackWebpackPlugin({}),
 		// Generates an `index.html` file with the js and css tags injected.
 		new HtmlWebpackPlugin({
 			// Title can be specified in the package.json enact options or will

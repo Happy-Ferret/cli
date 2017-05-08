@@ -188,6 +188,9 @@ module.exports = {
 		hints: false
 	},
 	plugins: [
+		// Partially evaluates the built javascript and then optimizes the code.
+		// See https://prepack.io for more details.
+		new PrepackWebpackPlugin({}),
 		// Generates an `index.html` file with the js and css tags injected.
 		new HtmlWebpackPlugin({
 			// Title can be specified in the package.json enact options or will
@@ -239,9 +242,6 @@ module.exports = {
 		new ILibPlugin(),
 		// Automatically detect ./appinfo.json and ./webos-meta/appinfo.json files,
 		// and parses any to copy over any webOS meta assets at build time.
-		new WebOSMetaPlugin(),
-		// Partially evaluates the built javascript and then optimizes the code.
-		// See https://prepack.io for more details.
-		new PrepackWebpackPlugin({})
+		new WebOSMetaPlugin()
 	]
 };
