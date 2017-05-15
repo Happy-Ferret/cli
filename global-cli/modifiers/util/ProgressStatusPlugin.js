@@ -48,7 +48,7 @@ ProgressStatusPlugin.prototype.apply = function(compiler) {
 					readline.cursorTo(spinner.stream, 0, null);
 					readline.clearScreenDown(stream);
 				}
-				spinner.setSpinnerString(0);
+				spinner.setSpinnerString(7);
 				spinner.setSpinnerDelay(opts.throttle);
 				spinner.start();
 			} else {
