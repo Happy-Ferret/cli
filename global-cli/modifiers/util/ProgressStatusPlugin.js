@@ -24,6 +24,7 @@ function ProgressStatusPlugin(options) {
 	this.options = options || {};
 	this.options.throttle = this.options.throttle || 60;
 	this.options.padding = this.options.padding || 8;
+	this.options.spinner = (typeof this.options.spinner !== 'undefined') ? this.options.spinner : 7;
 }
 
 ProgressStatusPlugin.prototype.apply = function(compiler) {
@@ -37,6 +38,7 @@ ProgressStatusPlugin.prototype.apply = function(compiler) {
 		if(value.percent<1) {
 			var msg = formatMessage(value, width, opts.padding);
 			if(!spinner) {
+				process.stdout.write('\n');
 				spinner = new cliSpinner.Spinner(msg);
 				spinner.onTick = function(text) {
 					readline.moveCursor(spinner.stream, 0, -1);
@@ -48,7 +50,7 @@ ProgressStatusPlugin.prototype.apply = function(compiler) {
 					readline.cursorTo(spinner.stream, 0, null);
 					readline.clearScreenDown(stream);
 				}
-				spinner.setSpinnerString(7);
+				spinner.setSpinnerString(opts.spinner);
 				spinner.setSpinnerDelay(opts.throttle);
 				spinner.start();
 			} else {
