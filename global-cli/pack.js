@@ -140,7 +140,7 @@ function watch(config) {
 	} else {
 		console.log('Creating an optimized production build and watching for changes...');
 	}
-	webpack(config).watch({}, (err, stats) => {
+	webpack(config).watch({aggregateTimeout: 300, poll: 1000}, (err, stats) => {
 		err = details(err, stats);
 		if (err) {
 			console.log(chalk.red('Failed to compile.\n'));
