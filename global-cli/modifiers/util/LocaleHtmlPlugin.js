@@ -265,6 +265,13 @@ LocaleHtmlPlugin.prototype.apply = function(compiler) {
 	const aiOptimize = {groups:{}, coverage:[]};
 	let jsAssets = [], locales = [];
 
+	let appID = '';
+	if(fs.existsSync('./appinfo.json')) {
+		appID = JSON.parse(fs.readFileSync('./appinfo.json', {encoding:'utf8'})).id;
+	} else if(fs.existsSync('./webos-meta/appinfo.json')) {
+		appID = JSON.parse(fs.readFileSync('./webos-meta/appinfo.json', {encoding:'utf8'})).id;
+	}
+
 	compiler.plugin('compilation', (compilation) => {
 		if(isNodeOutputFS(compiler)) {
 			// Determine the target locales and load up the startup scripts.
@@ -317,9 +324,18 @@ LocaleHtmlPlugin.prototype.apply = function(compiler) {
 					}
 					if(status.failed.length===0) vdomServer.unstage();
 					// Simplify out aliases and group together for minimal file output.
-					simplifyAliases(locales, status);
+					if(!process.env['ENACTDEV_DISABLE_LOCALE_DEDUPE']) {
+						simplifyAliases(locales, status);
+					}
 				}
 			});
+
+			if(process.env['ENACTDEV_ROOT_USEPRERENDERING']) {
+				compilation.plugin('webos-meta-root-appinfo', meta => {
+					meta.usePrerendering = true;
+					return meta;
+				});
+			}
 
 			// For any target locales that don't already have appinfo files, dynamically generate new ones.
 			compilation.plugin('webos-meta-list-localized', (locList) => {
@@ -368,7 +384,9 @@ LocaleHtmlPlugin.prototype.apply = function(compiler) {
 					}
 					if(loc) {
 						meta.main = 'index.' + locCode(loc) + '.html';
-						meta.usePrerendering = true;
+						if(!process.env['ENACTDEV_ROOT_USEPRERENDERING']) {
+							meta.usePrerendering = true;
+						}
 					}
 				}
 				return meta;
@@ -387,7 +405,7 @@ LocaleHtmlPlugin.prototype.apply = function(compiler) {
 			compilation.plugin('html-webpack-plugin-alter-asset-tags', (htmlPluginData, callback) => {
 				let startup = fs.readFileSync(path.join(__dirname, 'prerendered-startup.txt'), {encoding:'utf8'});
 				startup = startup.replace('%SCREENTYPES%', JSON.stringify(opts.screenTypes))
-						.replace('%JSASSETS%', JSON.stringify(jsAssets));
+						.replace('%JSASSETS%', JSON.stringify(jsAssets)).replace('%APPID%', appID);
 				htmlPluginData.head.unshift({
 					tagName: 'script',
 					closeTag: true,

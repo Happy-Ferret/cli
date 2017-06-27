@@ -19,7 +19,11 @@
 			}
 			document.documentElement.style.fontSize = scrObj.pxPerRem + 'px';
 
+			var appID = '%APPID%';
+			window.PalmSystem && window.PalmSystem.PmLogInfoWithClock && window.PalmSystem.PmLogInfoWithClock('APP_HTML_LOADING', 'AppLaunch', appID);
+
 			window.onload = function() { setTimeout(function() {
+				window.PalmSystem && window.PalmSystem.PmLogInfoWithClock && window.PalmSystem.PmLogInfoWithClock('APP_PRERENDER_LOADED', 'AppLaunch', appID);
 				if(typeof App === 'undefined') {
 					// Add script nodes, loading the chunks sequentially.
 					var appendScripts = function(js) {
@@ -32,6 +36,8 @@
 								appendScripts(js);
 							};
 							document.body.appendChild(script);
+						} else {
+							window.PalmSystem && window.PalmSystem.PmLogInfoWithClock && window.PalmSystem.PmLogInfoWithClock('APP_SCRIPTS_LOADED', 'AppLaunch', appID);
 						}
 					};
 					appendScripts(%JSASSETS%);
@@ -41,7 +47,9 @@
 						updateEnvironment();
 					}
 					if(typeof App === 'object' && (typeof ReactDOM === 'object')) {
+						window.PalmSystem && window.PalmSystem.PmLogInfoWithClock && window.PalmSystem.PmLogInfoWithClock('APP_SCRIPTS_LOADED', 'AppLaunch', appID);
 						ReactDOM.render(App['default'] || App, document.getElementById('root'));
+						window.PalmSystem && window.PalmSystem.PmLogInfoWithClock && window.PalmSystem.PmLogInfoWithClock('APP_REACTDOM_RENDERED', 'AppLaunch', appID);
 					} else {
 						console.log('ERROR: Snapshot app not found');
 					}

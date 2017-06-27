@@ -34,6 +34,13 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 	const status = {};
 	let jsAssets = [];
 
+	let appID = '';
+	if(fs.existsSync('./appinfo.json')) {
+		appID = JSON.parse(fs.readFileSync('./appinfo.json', {encoding:'utf8'})).id;
+	} else if(fs.existsSync('./webos-meta/appinfo.json')) {
+		appID = JSON.parse(fs.readFileSync('./webos-meta/appinfo.json', {encoding:'utf8'})).id;
+	}
+
 	// Prerender the desired chunk asset when it's created.
 	compiler.plugin('compilation', (compilation) => {
 		if(isNodeOutputFS(compiler)) {
@@ -88,9 +95,8 @@ PrerenderPlugin.prototype.apply = function(compiler) {
 			compilation.plugin('html-webpack-plugin-alter-asset-tags', (htmlPluginData, callback) => {
 				if(!status.err) {
 					let startup = fs.readFileSync(path.join(__dirname, 'prerendered-startup.txt'), {encoding:'utf8'});
-					startup = '\n\t\t' + startup.replace('%SCREENTYPES%', JSON.stringify(opts.screenTypes))
-							.replace('%JSASSETS%', JSON.stringify(jsAssets)).replace(/[\n\r]+(.)/g, '\n\t\t$1')
-							.replace(/[\n\r]+$/, '\n\t');
+					startup = startup.replace('%SCREENTYPES%', JSON.stringify(opts.screenTypes))
+							.replace('%JSASSETS%', JSON.stringify(jsAssets)).replace('%APPID%', appID);
 					htmlPluginData.head.unshift({
 						tagName: 'script',
 						closeTag: true,
