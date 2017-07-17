@@ -228,7 +228,8 @@ module.exports = {
 		// Otherwise React will be compiled in the very slow development mode.
 		new DefinePlugin({
 			'process.env': {
-				'NODE_ENV': '"production"'
+				'NODE_ENV': '"production"',
+				'NO_GPU_OPTIMIZED': process.env['NO_GPU_OPTIMIZED']
 			}
 		}),
 		// Minify the code.

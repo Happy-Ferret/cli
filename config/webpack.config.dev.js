@@ -241,7 +241,8 @@ module.exports = {
 		// if (process.env.NODE_ENV === 'development') { ... }.
 		new DefinePlugin({
 			'process.env': {
-				'NODE_ENV': '"development"'
+				'NODE_ENV': '"development"',
+				'NO_GPU_OPTIMIZED': process.env['NO_GPU_OPTIMIZED']
 			}
 		}),
 		// Note: this won't work without ExtractTextPlugin.extract(..) in `loaders`.
