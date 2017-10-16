@@ -165,6 +165,31 @@ module.exports = function(args) {
 	if (opts.production) {
 		process.env.NODE_ENV = 'production';
 		config = prodConfig;
+
+		// Support for experimental harmony uglify-es via --harmony flag or UGLIFY="harmony" env var.
+		if(opts.harmony || process.env.UGLIFY==='harmony') {
+			const helper = require('@enact/dev-utils/config-helper');
+			const uglifyIndex = helper.findPlugin(config, 'UglifyJsPlugin');
+			if(uglifyIndex>=0) {
+				const babelrc = require('../config/.babelrc.js');
+				delete babelrc.presets[0][1].targets.uglify;
+				const UglifyESPlugin = require('uglifyjs-webpack-plugin');
+				config.plugins[uglifyIndex] = new UglifyESPlugin({
+					uglifyOptions: {
+						compress: {
+							warnings: false,
+							// This feature has been reported as buggy a few times, such as:
+							// https://github.com/mishoo/UglifyJS2/issues/1964
+							// We'll wait with enabling it by default until it is more solid.
+							reduce_vars: false
+						},
+						output: {
+							comments: false
+						}
+					}
+				});
+			}
+		}
 	}
 
 	mixins.apply(config, opts);
